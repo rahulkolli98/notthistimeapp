@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { View, Text, TextInput, TouchableOpacity } from 'react-native'
 import { homeStyles } from './HomeStyles'
 
@@ -15,9 +15,19 @@ export function SearchSection({
   totalResults, 
   filteredResults 
 }: SearchSectionProps) {
+  const [isPressed, setIsPressed] = useState(false)
+
   return (
     <View style={homeStyles.searchSection}>
-      <View style={homeStyles.searchContainer}>
+      <View style={[
+        homeStyles.searchContainer,
+        isPressed && {
+          shadowOffset: { width: 0, height: 0 },
+          shadowOpacity: 0,
+          elevation: 0,
+          transform: [{ translateX: 3 }, { translateY: 3 }]
+        }
+      ]}>
         <Text style={homeStyles.searchIcon}>🔍</Text>
         <TextInput
           style={homeStyles.searchInput}
@@ -27,6 +37,8 @@ export function SearchSection({
           autoCapitalize="none"
           autoCorrect={false}
           clearButtonMode="while-editing"
+          onFocus={() => setIsPressed(true)}
+          onBlur={() => setIsPressed(false)}
         />
         {searchQuery.length > 0 && (
           <TouchableOpacity 

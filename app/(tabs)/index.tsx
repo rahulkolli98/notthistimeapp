@@ -14,7 +14,7 @@ import {
 } from '../../components'
 
 export default function Home() {
-  const { lists, loading, error, refetch } = useUserLists()
+  const { lists, loading, error, refetch, deleteList } = useUserLists()
   const router = useRouter()
   const { searchQuery, setSearchQuery, filteredLists, clearSearch } = useHomeSearch(lists)
 
@@ -26,6 +26,14 @@ export default function Home() {
     router.push('/(tabs)/create')
   }
 
+  const handleDeleteList = async (listId: string) => {
+    try {
+      await deleteList(listId)
+    } catch (err) {
+      console.error('Error deleting list:', err)
+    }
+  }
+
   const renderEmptyState = () => {
     if (searchQuery.trim()) {
       return (
@@ -34,7 +42,7 @@ export default function Home() {
           searchQuery={searchQuery}
           onClearSearch={clearSearch}
         />
-      )
+  )
     }
 
     return (
@@ -85,6 +93,8 @@ export default function Home() {
           <ShoppingListCard
             list={item}
             onPress={handleListPress}
+            onDelete={handleDeleteList}
+            isOwner={item.is_owner}
           />
         )}
         keyExtractor={(item) => item.id}
@@ -102,4 +112,4 @@ export default function Home() {
       />
     </View>
   )
-} 
+}

@@ -1,4 +1,4 @@
-import React, { useRef } from 'react'
+import React, { useRef, useState } from 'react'
 import { TouchableOpacity, Text, Animated } from 'react-native'
 import Svg, { Path } from 'react-native-svg'
 import { homeStyles } from './HomeStyles'
@@ -41,6 +41,9 @@ export function AnimatedLeafButton({ onPress, text }: AnimatedLeafButtonProps) {
   const leaf1Rotation = useRef(new Animated.Value(10)).current
   const leaf2Rotation = useRef(new Animated.Value(0)).current
   const leaf3Rotation = useRef(new Animated.Value(-5)).current
+  
+  // Button press animation
+  const [isPressed, setIsPressed] = useState(false)
 
   const startLeafAnimations = () => {
     // Leaf 1 animation
@@ -94,9 +97,22 @@ export function AnimatedLeafButton({ onPress, text }: AnimatedLeafButtonProps) {
 
   return (
     <TouchableOpacity 
-      style={homeStyles.createButton} 
+      style={[
+        homeStyles.createButton,
+        isPressed && {
+          shadowOffset: { width: 0, height: 0 },
+          shadowOpacity: 0,
+          elevation: 0,
+          transform: [{ translateX: 3 }, { translateY: 3 }]
+        }
+      ]} 
       onPress={onPress}
-      onPressIn={startLeafAnimations}
+      onPressIn={() => {
+        setIsPressed(true)
+        startLeafAnimations()
+      }}
+      onPressOut={() => setIsPressed(false)}
+      activeOpacity={1}
     >
       <Text style={homeStyles.createButtonText}>{text}</Text>
       

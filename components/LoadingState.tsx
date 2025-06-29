@@ -1,6 +1,7 @@
 import React from 'react'
-import { View, Text, ActivityIndicator } from 'react-native'
+import { View, Text } from 'react-native'
 import { homeStyles } from './HomeStyles'
+import { TruckLoader } from './TruckLoader'
 
 interface LoadingStateProps {
   message?: string
@@ -9,7 +10,7 @@ interface LoadingStateProps {
 export function LoadingState({ message = 'Loading your lists...' }: LoadingStateProps) {
   return (
     <View style={homeStyles.loadingContainer}>
-      <ActivityIndicator size="large" color="#007AFF" />
+      <TruckLoader size="medium" />
       <Text style={homeStyles.loadingText}>{message}</Text>
     </View>
   )

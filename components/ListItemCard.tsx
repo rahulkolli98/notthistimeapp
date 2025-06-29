@@ -17,13 +17,13 @@ export function ListItemCard({ item, shoppingMode, onStatusChange, onDelete }: L
       key={status}
       style={[
         listStyles.statusButton,
-        { backgroundColor: item.status === status ? getStatusColor(status) : '#f0f0f0' }
+        { backgroundColor: item.status === status ? getStatusColor(status) : '#f5deb3' }
       ]}
       onPress={() => onStatusChange(item, status)}
     >
       <Text style={[
         listStyles.statusButtonText,
-        { color: item.status === status ? '#fff' : '#333' }
+        { color: item.status === status ? '#fff' : '#323232' }
       ]}>
         {label}
       </Text>

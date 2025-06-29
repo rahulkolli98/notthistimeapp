@@ -3,8 +3,6 @@ import {
   View,
   Text,
   FlatList,
-  TouchableOpacity,
-  ActivityIndicator,
   RefreshControl,
   Alert,
   Modal,
@@ -12,7 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Switch
+  TouchableOpacity
 } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useListItems, ListItem } from '../../hooks/useListItems'
@@ -22,7 +20,18 @@ import { useListMembers, ListMember } from '../../hooks/useListMembers'
 import { useListDetails } from '../../hooks/useListDetails'
 import { useItemModal } from '../../hooks/useItemModal'
 import { supabase } from '../../lib/supabase'
-import { listStyles, modalStyles, replacementRequestStyles, AddItemModal, ListItemCard } from '../../components'
+import { 
+  modalStyles, 
+  AddItemModal, 
+  ListItemCard, 
+  TruckLoader,
+  ListDetailsHeader,
+  ShoppingModeToggle,
+  EmptyListState,
+  ReplacementRequestsSection,
+  InviteMembersModal,
+  listDetailsStyles
+} from '../../components'
 import { sortItems } from '../../utils/itemHelpers'
 
 export default function ListDetails() {
@@ -202,7 +211,6 @@ export default function ListDetails() {
     )
   }
 
-  // ... (replacement request handling functions remain the same for now)
   const handleOutOfStockWithoutReplacements = async () => {
     if (!selectedOutOfStockItem) return
 
@@ -249,7 +257,7 @@ export default function ListDetails() {
         .insert(replacementRequests)
 
       if (error) throw error
-
+      
       Alert.alert(
         'Replacement Suggestions Sent!',
         `Your replacement suggestions for "${selectedOutOfStockItem.name}" have been sent to your collaborators.`,
@@ -337,105 +345,41 @@ export default function ListDetails() {
     }
   }
 
-  const renderEmptyState = () => (
-    <View style={listStyles.emptyState}>
-      <Text style={listStyles.emptyTitle}>No Items Yet</Text>
-      <Text style={listStyles.emptySubtitle}>
-        Start building your shopping list by adding items!
-      </Text>
-      <TouchableOpacity style={listStyles.emptyButton} onPress={itemModal.openModal}>
-        <Text style={listStyles.emptyButtonText}>Add First Item</Text>
-      </TouchableOpacity>
-    </View>
-  )
-
   if (loading && items.length === 0) {
     return (
-      <View style={listStyles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
-        <Text style={listStyles.loadingText}>Loading items...</Text>
+      <View style={listDetailsStyles.loadingContainer}>
+        <TruckLoader size="medium" />
+        <Text style={listDetailsStyles.loadingText}>Loading items...</Text>
       </View>
     )
   }
 
   return (
-    <View style={listStyles.container}>
+    <View style={listDetailsStyles.root}>
       {/* Header */}
-      <View style={listStyles.header}>
-        <TouchableOpacity style={listStyles.backButton} onPress={() => router.back()}>
-          <Text style={listStyles.backButtonText}>← Back</Text>
-        </TouchableOpacity>
-        <View style={listStyles.headerInfo}>
-          <Text style={listStyles.listName}>{listInfo?.name || 'Shopping List'}</Text>
-          <Text style={listStyles.listCategory}>{listInfo?.category}</Text>
-        </View>
-        <View style={listStyles.headerActions}>
-          <TouchableOpacity style={listStyles.inviteButton} onPress={() => setShowInviteModal(true)}>
-            <Text style={listStyles.inviteButtonText}>👥</Text>
-          </TouchableOpacity>
-          {isOwner && (
-            <TouchableOpacity style={listStyles.deleteListButton} onPress={handleDeleteList}>
-              <Text style={listStyles.deleteListButtonText}>Delete</Text>
-            </TouchableOpacity>
-          )}
-          {!isOwner && (
-            <TouchableOpacity style={listStyles.leaveButton} onPress={handleLeaveList}>
-              <Text style={listStyles.leaveButtonText}>Leave</Text>
-            </TouchableOpacity>
-          )}
-          <TouchableOpacity style={listStyles.addButton} onPress={itemModal.openModal}>
-            <Text style={listStyles.addButtonText}>+ Add</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+      <ListDetailsHeader
+        listName={listInfo?.name || 'Shopping List'}
+        category={listInfo?.category || ''}
+        isOwner={isOwner}
+        onBack={() => router.back()}
+        onInvite={() => setShowInviteModal(true)}
+        onDelete={handleDeleteList}
+        onLeave={handleLeaveList}
+        onAddItem={itemModal.openModal}
+      />
 
       {/* Shopping Mode Toggle */}
-      <View style={listStyles.shoppingModeContainer}>
-        <View style={listStyles.shoppingModeInfo}>
-          <Text style={listStyles.shoppingModeLabel}>Shopping Mode</Text>
-          <Text style={listStyles.shoppingModeSubtext}>
-            {shoppingMode ? 'Enhanced out-of-stock options' : 'Basic list management'}
-          </Text>
-        </View>
-        <Switch
-          value={shoppingMode}
-          onValueChange={setShoppingMode}
-          trackColor={{ false: '#e0e0e0', true: '#007AFF' }}
-          thumbColor={shoppingMode ? '#fff' : '#f4f3f4'}
-        />
-      </View>
+      <ShoppingModeToggle
+        shoppingMode={shoppingMode}
+        onToggle={setShoppingMode}
+      />
 
       {/* Replacement Requests Section */}
-      {(requests.length > 0 || requestsLoading) && (
-        <View style={replacementRequestStyles.replacementRequestsSection}>
-          <Text style={replacementRequestStyles.replacementRequestsTitle}>
-            {requestsLoading ? 'Loading Requests...' : `Pending Replacement Requests (${requests.length})`}
-          </Text>
-          {requestsLoading ? (
-            <View style={listStyles.loadingContainer}>
-              <ActivityIndicator size="small" color="#007AFF" />
-            </View>
-          ) : (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              {requests.map((request) => (
-                <TouchableOpacity
-                  key={request.id}
-                  style={replacementRequestStyles.replacementRequestCard}
-                  onPress={() => handleRequestResponse(request)}
-                >
-                  <Text style={replacementRequestStyles.requestItemName}>{request.original_item_name}</Text>
-                  <Text style={replacementRequestStyles.requestSuggestion}>
-                    → {request.suggested_replacement}
-                  </Text>
-                  <Text style={replacementRequestStyles.requestRequester}>
-                    by {request.requester_name}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          )}
-        </View>
-      )}
+      <ReplacementRequestsSection
+        requests={requests}
+        loading={requestsLoading}
+        onRequestPress={handleRequestResponse}
+      />
 
       {/* Items List */}
       <FlatList
@@ -449,7 +393,7 @@ export default function ListDetails() {
           />
         )}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={items.length === 0 ? listStyles.emptyContainer : listStyles.listContainer}
+        contentContainerStyle={items.length === 0 ? listDetailsStyles.emptyContainer : listDetailsStyles.listContainer}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -459,7 +403,7 @@ export default function ListDetails() {
             tintColor="#007AFF"
           />
         }
-        ListEmptyComponent={renderEmptyState}
+        ListEmptyComponent={<EmptyListState onAddItem={itemModal.openModal} />}
       />
 
       {/* Add Item Modal */}
@@ -636,273 +580,4 @@ export default function ListDetails() {
       />
     </View>
   )
-}
-
-// Invite Members Modal Component
-function InviteMembersModal({ 
-  visible, 
-  listId, 
-  listName, 
-  members,
-  membersLoading,
-  currentUserId,
-  isOwner,
-  onClose,
-  onRemoveMember,
-  onUpdateMemberRole
-}: { 
-  visible: boolean
-  listId: string
-  listName: string
-  members: ListMember[]
-  membersLoading: boolean
-  currentUserId: string | null
-  isOwner: boolean
-  onClose: () => void
-  onRemoveMember: (memberId: string) => void
-  onUpdateMemberRole: (memberId: string, newRole: 'editor' | 'member') => void
-}) {
-  const [email, setEmail] = useState('')
-  const [message, setMessage] = useState('')
-  const [role, setRole] = useState<'member' | 'editor'>('member')
-  const [sending, setSending] = useState(false)
-  const [showInviteSection, setShowInviteSection] = useState(false)
-
-  const handleSendInvitation = async () => {
-    if (!email.trim()) {
-      Alert.alert('Error', 'Please enter an email address')
-      return
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(email)) {
-      Alert.alert('Error', 'Please enter a valid email address')
-      return
-    }
-
-    setSending(true)
-    try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('No authenticated user')
-
-      const { error } = await supabase
-        .from('invitations')
-        .insert({
-          list_id: listId,
-          invited_by: user.id,
-          invited_email: email.trim().toLowerCase(),
-          role,
-          message: message.trim() || null,
-          status: 'pending'
-        })
-
-      if (error) {
-        if (error.code === '23505') {
-          throw new Error('An invitation has already been sent to this email for this list')
-        }
-        throw error
-      }
-
-      Alert.alert(
-        'Invitation Sent!',
-        `An invitation to join "${listName}" has been sent to ${email}`,
-        [{ text: 'OK', onPress: () => {
-          setEmail('')
-          setMessage('')
-          setRole('member')
-          onClose()
-        }}]
-      )
-    } catch (err) {
-      console.error('Error sending invitation:', err)
-      Alert.alert('Error', err instanceof Error ? err.message : 'Failed to send invitation')
-    } finally {
-      setSending(false)
-    }
-  }
-
-  return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={onClose}
-    >
-      <KeyboardAvoidingView
-        style={modalStyles.modalContainer}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-        <View style={modalStyles.modalHeader}>
-          <TouchableOpacity onPress={onClose}>
-            <Text style={modalStyles.modalCancelText}>Close</Text>
-          </TouchableOpacity>
-          <Text style={modalStyles.modalTitle}>Members & Sharing</Text>
-          <View style={{ width: 50 }} />
-        </View>
-
-        <ScrollView style={modalStyles.modalContent}>
-          {/* Current Members Section */}
-          <View style={modalStyles.membersSection}>
-            <Text style={modalStyles.sectionTitle}>Current Members ({members.length})</Text>
-            
-            {membersLoading ? (
-              <View style={listStyles.loadingContainer}>
-                <ActivityIndicator size="small" color="#007AFF" />
-                <Text style={listStyles.loadingText}>Loading members...</Text>
-              </View>
-            ) : (
-              <>
-                {members.map((member) => (
-                  <View key={member.id} style={modalStyles.memberCard}>
-                    <View style={modalStyles.memberInfo}>
-                      <Text style={modalStyles.memberName}>
-                        {member.name}
-                        {member.isCurrentUser && ' (You)'}
-                      </Text>
-                      {member.email && (
-                        <Text style={modalStyles.memberEmail}>{member.email}</Text>
-                      )}
-                      <Text style={modalStyles.memberJoinDate}>
-                        Joined {new Date(member.joined_at).toLocaleDateString()}
-                      </Text>
-                    </View>
-                    <View style={modalStyles.memberActions}>
-                      <View style={[modalStyles.roleBadge, member.role === 'owner' && modalStyles.ownerBadge]}>
-                        <Text style={[modalStyles.roleBadgeText, member.role === 'owner' && modalStyles.ownerBadgeText]}>
-                          {member.role === 'owner' ? 'Owner' : member.role === 'editor' ? 'Editor' : 'Member'}
-                        </Text>
-                      </View>
-                      {isOwner && member.role !== 'owner' && !member.isCurrentUser && (
-                        <TouchableOpacity
-                          style={modalStyles.removeButton}
-                          onPress={() => {
-                            Alert.alert(
-                              'Remove Member',
-                              `Are you sure you want to remove ${member.name} from this list?`,
-                              [
-                                { text: 'Cancel', style: 'cancel' },
-                                { 
-                                  text: 'Remove', 
-                                  style: 'destructive',
-                                  onPress: () => onRemoveMember(member.id)
-                                }
-                              ]
-                            )
-                          }}
-                        >
-                          <Text style={modalStyles.removeButtonText}>×</Text>
-                        </TouchableOpacity>
-                      )}
-                    </View>
-                  </View>
-                ))}
-              </>
-            )}
-          </View>
-
-          {/* Invite New Member Section */}
-          <View style={modalStyles.inviteSection}>
-            <TouchableOpacity
-              style={modalStyles.inviteToggleButton}
-              onPress={() => setShowInviteSection(!showInviteSection)}
-            >
-              <Text style={modalStyles.inviteToggleText}>
-                {showInviteSection ? '− Hide Invite Options' : '+ Invite New Member'}
-              </Text>
-            </TouchableOpacity>
-
-            {showInviteSection && (
-              <>
-                <View style={modalStyles.inviteInfo}>
-                  <Text style={modalStyles.inviteInfoTitle}>Invite to "{listName}"</Text>
-                  <Text style={modalStyles.inviteInfoSubtext}>
-                    Send an invitation to a registered user. They must already have an account to join your list.
-                  </Text>
-                </View>
-
-                <View style={modalStyles.inputGroup}>
-                  <Text style={modalStyles.inputLabel}>Email Address *</Text>
-                  <TextInput
-                    style={modalStyles.textInput}
-                    value={email}
-                    onChangeText={setEmail}
-                    placeholder="Enter their email address"
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    maxLength={100}
-                  />
-                  <Text style={modalStyles.helperText}>
-                    The user must already be registered with this email address
-                  </Text>
-                </View>
-
-                <View style={modalStyles.inputGroup}>
-                  <Text style={modalStyles.inputLabel}>Role</Text>
-                  <View style={modalStyles.roleSelector}>
-                    <TouchableOpacity
-                      style={[
-                        modalStyles.roleButton,
-                        role === 'member' && modalStyles.roleButtonSelected
-                      ]}
-                      onPress={() => setRole('member')}
-                    >
-                      <Text style={[
-                        modalStyles.roleButtonText,
-                        role === 'member' && modalStyles.roleButtonTextSelected
-                      ]}>
-                        Member
-                      </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[
-                        modalStyles.roleButton,
-                        role === 'editor' && modalStyles.roleButtonSelected
-                      ]}
-                      onPress={() => setRole('editor')}
-                    >
-                      <Text style={[
-                        modalStyles.roleButtonText,
-                        role === 'editor' && modalStyles.roleButtonTextSelected
-                      ]}>
-                        Editor
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                  <Text style={modalStyles.helperText}>
-                    Members can view and edit items. Editors can also invite others.
-                  </Text>
-                </View>
-
-                <View style={modalStyles.inputGroup}>
-                  <Text style={modalStyles.inputLabel}>Personal Message (Optional)</Text>
-                  <TextInput
-                    style={[modalStyles.textInput, modalStyles.textArea]}
-                    value={message}
-                    onChangeText={setMessage}
-                    placeholder="Add a personal message to your invitation..."
-                    multiline
-                    numberOfLines={3}
-                    maxLength={200}
-                    textAlignVertical="top"
-                  />
-                  <Text style={modalStyles.charCount}>{message.length}/200</Text>
-                </View>
-
-                <TouchableOpacity
-                  style={[modalStyles.sendInviteButton, (!email.trim() || sending) && modalStyles.sendInviteButtonDisabled]}
-                  onPress={handleSendInvitation}
-                  disabled={!email.trim() || sending}
-                >
-                  <Text style={[modalStyles.sendInviteButtonText, (!email.trim() || sending) && modalStyles.sendInviteButtonTextDisabled]}>
-                    {sending ? 'Sending Invitation...' : 'Send Invitation'}
-                  </Text>
-                </TouchableOpacity>
-              </>
-            )}
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </Modal>
-  )
-}
+} 

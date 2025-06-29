@@ -1,147 +1,171 @@
-import React, { useState } from 'react'
-import { Alert, StyleSheet, View, Button, TextInput, Text, TouchableOpacity } from 'react-native'
+import React from 'react'
+import { 
+  View, 
+  Text, 
+  ScrollView, 
+  TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
+  Alert
+} from 'react-native'
 import { Link } from 'expo-router'
 import { supabase } from '../../lib/supabase'
+import { useAuthForm } from '../../hooks/useAuthForm'
+import { AuthInput, AuthButton, authStyles } from '../../components'
 
 export default function Register() {
-  const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [loading, setLoading] = useState(false)
+  const form = useAuthForm({
+    name: {
+      value: '',
+      error: '',
+      rules: { required: true }
+    },
+    email: {
+      value: '',
+      error: '',
+      rules: { required: true, email: true }
+    },
+    password: {
+      value: '',
+      error: '',
+      rules: { required: true, minLength: 6 }
+    },
+    confirmPassword: {
+      value: '',
+      error: '',
+      rules: { required: true, match: 'password' }
+    }
+  })
 
-  async function signUpWithEmail() {
-    if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match')
+  const handleSignUp = async () => {
+    if (!form.validateAll()) {
       return
     }
 
-    if (name.trim() === '') {
-      Alert.alert('Error', 'Please enter your name')
-      return
-    }
+    form.setLoading(true)
 
-    setLoading(true)
-    const { error } = await supabase.auth.signUp({
-      email: email,
-      password: password,
-      options: {
-        data: {
-          name: name.trim(),
+    try {
+      const { error } = await supabase.auth.signUp({
+        email: form.fields.email.value.trim(),
+        password: form.fields.password.value,
+        options: {
+          data: {
+            name: form.fields.name.value.trim(),
+          },
         },
-      },
-    })
+      })
 
-    if (error) {
-      Alert.alert('Error', error.message)
-    } else {
-      Alert.alert('Success', 'Please check your inbox for email verification!')
+      if (error) {
+        form.handleError(error)
+      } else {
+        Alert.alert(
+          'Account Created!',
+          'Please check your email inbox for a verification link to complete your account setup.',
+          [
+            {
+              text: 'OK',
+              onPress: () => form.resetForm()
+            }
+          ]
+        )
+      }
+    } catch (error) {
+      form.handleError(error)
+    } finally {
+      form.setLoading(false)
     }
-    setLoading(false)
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Create Account</Text>
-      
-      <View style={[styles.verticallySpaced, styles.mt20]}>
-        <TextInput
-          onChangeText={(text) => setName(text)}
-          value={name}
-          placeholder="Full Name"
-          autoCapitalize={'words'}
-          style={styles.input}
-        />
-      </View>
-      
-      <View style={styles.verticallySpaced}>
-        <TextInput
-          onChangeText={(text) => setEmail(text)}
-          value={email}
-          placeholder="email@address.com"
-          autoCapitalize={'none'}
-          keyboardType="email-address"
-          style={styles.input}
-        />
-      </View>
-      
-      <View style={styles.verticallySpaced}>
-        <TextInput
-          onChangeText={(text) => setPassword(text)}
-          value={password}
-          secureTextEntry={true}
-          placeholder="Password"
-          autoCapitalize={'none'}
-          style={styles.input}
-        />
-      </View>
-      
-      <View style={styles.verticallySpaced}>
-        <TextInput
-          onChangeText={(text) => setConfirmPassword(text)}
-          value={confirmPassword}
-          secureTextEntry={true}
-          placeholder="Confirm Password"
-          autoCapitalize={'none'}
-          style={styles.input}
-        />
-      </View>
-      
-      <View style={[styles.verticallySpaced, styles.mt20]}>
-        <Button title="Create Account" disabled={loading} onPress={() => signUpWithEmail()} />
-      </View>
-      
-      <View style={styles.linkContainer}>
-        <Text style={styles.linkText}>Already have an account? </Text>
-        <Link href="/(auth)/login" asChild>
-          <TouchableOpacity>
-            <Text style={styles.link}>Sign In</Text>
-          </TouchableOpacity>
-        </Link>
-      </View>
-    </View>
-  )
-}
+    <KeyboardAvoidingView 
+      style={authStyles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <ScrollView 
+        contentContainerStyle={authStyles.scrollContainer}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={authStyles.card}>
+          {/* Header */}
+          <View style={authStyles.header}>
+            <Text style={authStyles.title}>Create Account</Text>
+            <Text style={authStyles.subtitle}>
+              Join NotThisTime to start collaborating on shopping lists with friends and family
+            </Text>
+          </View>
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    padding: 20,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 30,
-  },
-  verticallySpaced: {
-    paddingTop: 4,
-    paddingBottom: 4,
-    alignSelf: 'stretch',
-  },
-  mt20: {
-    marginTop: 20,
-  },
-  input: {
-    borderColor: '#ccc',
-    borderWidth: 1,
-    padding: 12,
-    borderRadius: 8,
-    fontSize: 16,
-  },
-  linkContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: 20,
-  },
-  linkText: {
-    fontSize: 16,
-    color: '#666',
-  },
-  link: {
-    fontSize: 16,
-    color: '#007AFF',
-    fontWeight: '600',
-  },
-}) 
+          {/* Form */}
+          <View style={authStyles.form}>
+            <AuthInput
+              label="Full Name"
+              placeholder="Enter your full name"
+              autoCapitalize="words"
+              autoComplete="name"
+              autoCorrect={false}
+              {...form.getFieldProps('name')}
+            />
+
+            <AuthInput
+              label="Email Address"
+              placeholder="Enter your email"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoComplete="email"
+              autoCorrect={false}
+              {...form.getFieldProps('email')}
+            />
+
+            <AuthInput
+              label="Password"
+              placeholder="Create a password (min. 6 characters)"
+              isPassword
+              autoCapitalize="none"
+              autoComplete="new-password"
+              {...form.getFieldProps('password')}
+            />
+
+            <AuthInput
+              label="Confirm Password"
+              placeholder="Confirm your password"
+              isPassword
+              autoCapitalize="none"
+              autoComplete="new-password"
+              {...form.getFieldProps('confirmPassword')}
+            />
+
+            <AuthButton
+              title="Create Account"
+              onPress={handleSignUp}
+              loading={form.loading}
+            />
+          </View>
+
+          {/* Divider */}
+          <View style={authStyles.divider}>
+            <View style={authStyles.dividerLine} />
+            <Text style={authStyles.dividerText}>or</Text>
+            <View style={authStyles.dividerLine} />
+          </View>
+
+          {/* Sign In Link */}
+          <View style={authStyles.linkContainer}>
+            <Text style={authStyles.linkText}>Already have an account? </Text>
+            <Link href="/(auth)/login" asChild>
+              <TouchableOpacity>
+                <Text style={authStyles.link}>Sign In</Text>
+              </TouchableOpacity>
+            </Link>
+          </View>
+        </View>
+
+        {/* Footer */}
+        <View style={authStyles.footer}>
+          <Text style={authStyles.footerText}>
+            By creating an account, you agree to our Terms of Service and Privacy Policy
+          </Text>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
+  )
+} 

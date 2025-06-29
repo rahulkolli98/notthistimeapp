@@ -11,6 +11,7 @@ export interface ShoppingList {
   updated_at: string
   item_count?: number
   creator_name?: string
+  is_owner?: boolean
 }
 
 export function useUserLists() {
@@ -104,7 +105,8 @@ export function useUserLists() {
         created_at: list.created_at,
         updated_at: list.updated_at,
         creator_name: creatorMap.get(list.created_by) || 'Unknown',
-        item_count: itemCountMap.get(list.id) || 0
+        item_count: itemCountMap.get(list.id) || 0,
+        is_owner: list.created_by === user.id
       }))
 
       setLists(transformedLists)
